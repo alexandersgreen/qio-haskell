@@ -1,18 +1,19 @@
-Name:		QIO
-Version:	1.3
-Compiler:	GHC >= 8.0.1
-Cabal-Version:	>= 1.24
-License:	BSD3
-License-File:	LICENSE
-Author:		Alexander S. Green
-Maintainer: 	alexander.s.green@gmail.com
-Homepage:	https://github.com/alexandersgreen/qio-haskell
-Category:	Quantum
-Synopsis:	The Quantum IO Monad is a library for defining quantum computations in Haskell
-Description:	The Quantum IO Monad is a library for defining quantum computations in Haskell. It can be thought of as an embedded language within Haskell, and comes with functions for simulating the running of these quantum computations. The distribution contains many example computations written in QIO, including an implementation of Shor's algorithm.
-Build-Type:	Simple
+Name:			QIO
+Version:		1.3
+Cabal-Version:		>= 1.24
+License:		BSD3
+License-File:		LICENSE
+Author:			Alexander S. Green
+Maintainer: 		alexander.s.green@gmail.com
+Homepage:		https://github.com/alexandersgreen/qio-haskell
+Category:		Quantum
+Synopsis:		The Quantum IO Monad is a library for defining quantum computations in Haskell
+Description:		The Quantum IO Monad is a library for defining quantum computations in Haskell. It can be thought of as an embedded language within Haskell, and comes with functions for simulating the running of these quantum computations. The distribution contains many example computations written in QIO, including an implementation of Shor's algorithm.
+Build-Type:		Simple
 
 Library
+  Default-language:
+    Haskell2010
   Build-Depends:		
     base >= 4.9, containers, mtl, random, old-time
   Exposed-modules:
