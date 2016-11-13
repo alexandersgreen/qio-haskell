@@ -66,20 +66,22 @@ test_bell  =  do  qb <- bell
 -- the qubit twice, and then the qubit is measured. This should correspond to
 -- the identity function on the given Boolean value.
 hadTwice :: Bool -> QIO Bool
-hadTwice x = do q <- mkQ x
-		applyU (uhad q `mappend` uhad q)
-		b <- measQ q
-		return b
+hadTwice x = do 
+  q <- mkQ x
+  applyU (uhad q `mappend` uhad q)
+  b <- measQ q
+  return b
 
 -- | A different implementation of 'hadTwice' where QIO is used to apply two
 -- unitaries, each of which is a single Hadamard gate, as opposed to a single
 -- unitary, which is two Hadamard gates. 
 hadTwice' :: Bool -> QIO Bool
-hadTwice' x = do q <- mkQ x
-	 	 applyU (uhad q)
-                 applyU (uhad q)
-		 b <- measQ q
-		 return b
+hadTwice' x = do 
+  q <- mkQ x
+  applyU (uhad q)
+  applyU (uhad q)
+  b <- measQ q
+  return b
 
 ----------------------------------------------
 ---- Teleportation ---------------------------
@@ -88,11 +90,11 @@ hadTwice' x = do q <- mkQ x
 -- | The operations that Alice must perform in the classic quantum teleportation
 -- example.
 alice :: Qbit -> Qbit -> QIO (Bool,Bool)
-alice aq eq  =  do  applyU (cond aq (\a -> if a then (unot eq)
-                                              else (mempty)  )  )
-                    applyU (uhad aq)
-                    cd <- measQ (aq,eq)
-                    return cd
+alice aq eq  =  do  
+  applyU (cond aq (\a -> if a then (unot eq) else (mempty)))
+  applyU (uhad aq)
+  cd <- measQ (aq,eq)
+  return cd
 
 -- | A definition of the Pauli-Z gate.
 uZZ :: Qbit -> U
@@ -104,8 +106,7 @@ bobsU :: (Bool,Bool) -> Qbit -> U
 bobsU  (False,False)  eq  =  mempty
 bobsU  (False,True)  eq  =  (unot eq)
 bobsU  (True,False)  eq  =  (uZZ eq)
-bobsU  (True,True)  eq  =	     ((unot eq) 
-       		    	   `mappend` (uZZ eq))
+bobsU  (True,True)  eq  = ((unot eq) `mappend` (uZZ eq))
 
 -- | The overall operations that Bob must perform in the classic quantum
 -- teleportation example
@@ -123,10 +124,11 @@ teleportation iq  =  do  (eq1,eq2) <- bell
 -- | A small test function of quantum teleportation, which teleports a
 -- bell state, and then measures it.
 test_teleport :: QIO (Bool,Bool)
-test_teleport = do (q1,q2) <- bell
-                   tq2 <- teleportation q2
-		   result <- measQ (q1,tq2)
-		   return result
+test_teleport = do 
+  (q1,q2) <- bell
+  tq2 <- teleportation q2
+  result <- measQ (q1,tq2)
+  return result
 
 -- | teleports a qubit in the state |1>
 teleport_true' :: QIO Qbit

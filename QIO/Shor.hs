@@ -24,20 +24,16 @@ hadamardsI (QInt xs) = hadamards xs
 
 -- | The overall \"phase-estimation\" structure of Shor's algorithm.
 shorU :: QInt -> QInt -> Int -> Int -> U
-shorU k i1 x n = hadamardsI k
-		 `mappend` 
-		 modExp n x k i1
-                 `mappend`
-		 qftI k
+shorU k i1 x n = hadamardsI k `mappend` modExp n x k i1 `mappend` qftI k
 
 -- | A quantum computation the implementes shor's algorithm, returning the period
 -- of the function.
 shor :: Int -> Int -> QIO Int
-shor x n = do i0 <- mkQ 0
-              i1 <- mkQ 1
-	      applyU (shorU i0 i1 x n)
-	      p <- measQ i0
-	      return p
+shor x n = do 
+  i0 <- mkQ 0
+  i1 <- mkQ 1
+  applyU (shorU i0 i1 x n)
+  measQ i0
 
 -- | A classical (inefficient) implementation of the period finding subroutine 
 period :: Int -> Int -> Int
@@ -49,40 +45,41 @@ factor n | even n = return (2,2)
          | otherwise = do x <- rand_coprime n
                           a <- shor x n
                           let xa = x^(half a) 
-		              in if   odd a || xa == (n-1) `mod` n || a == 0
-		                 then factor n
-		                 else  return (gcd (xa+1) n,gcd (xa-1) n)
+                            in if odd a || xa == (n-1) `mod` n || a == 0
+                               then factor n
+                               else return (gcd (xa+1) n,gcd (xa-1) n)
 --this function can only be run too, for similar reasons to the rand_co'
 --function below
 
 -- | This function simulates the running of a QIO computation, whilst using
 -- System.Time functions to time how long the simulation took.
 runTime :: QIO a -> IO a
-runTime a = do start <- getClockTime
-               result <- run a
-               stop <- getClockTime
-               putStr ("The total time taken was " ++ 
-                      (timeDiffToString (diffClockTimes stop start) ++ "\n"))
-               return result
+runTime a = do 
+  start <- getClockTime
+  result <- run a
+  stop <- getClockTime
+  putStr ("The total time taken was " ++ (timeDiffToString (diffClockTimes stop start) ++ "\n"))
+  return result
 
 -- | Times the running of various subroutines within the factorisation algorithm.
 factorV' :: Int -> IO (Int,Int)
 factorV' n | even n = return (2,2)
-           | otherwise = do start <- getClockTime
-                            putStr ("Started at " ++ (show start) ++ "\n")
-                            x <- run (rand_coprime n)
-                            putStr ("Calling \"shor " ++ show x ++ " " ++ show n ++ "\"\n")
-                            a <- run (shor x n)
-                            stop <- getClockTime
-                            putStr ("Shor took " ++ (timeDiffToString (diffClockTimes stop start)) ++ "\n")
-                            putStr ("period a = " ++ show a)
-                            let xa = x^(half a) 
-		               in do putStr (", giving xa = " ++ show xa ++ "\n")
-                                     if odd a || xa == (n-1) `mod` n || (gcd (xa+1) n,gcd (xa-1) n) == (1,n) || (gcd (xa+1) n,gcd (xa-1) n) == (n,1) || (gcd (xa+1) n,gcd (xa-1) n) == (1,1)
-		                      then do putStr "Recalling factorV\n"
-                                              factorV' n
-		                      else do putStr "Result: " 
-                                              return (gcd (xa+1) n,gcd (xa-1) n)
+           | otherwise = do 
+  start <- getClockTime
+  putStr ("Started at " ++ (show start) ++ "\n")
+  x <- run (rand_coprime n)
+  putStr ("Calling \"shor " ++ show x ++ " " ++ show n ++ "\"\n")
+  a <- run (shor x n)
+  stop <- getClockTime
+  putStr ("Shor took " ++ (timeDiffToString (diffClockTimes stop start)) ++ "\n")
+  putStr ("period a = " ++ show a)
+  let xa = x^(half a) 
+    in do putStr (", giving xa = " ++ show xa ++ "\n")
+          if odd a || xa == (n-1) `mod` n || (gcd (xa+1) n,gcd (xa-1) n) == (1,n) || (gcd (xa+1) n,gcd (xa-1) n) == (n,1) || (gcd (xa+1) n,gcd (xa-1) n) == (1,1)
+           then do putStr "Recalling factorV\n"
+                   factorV' n
+           else do putStr "Result: " 
+                   return (gcd (xa+1) n,gcd (xa-1) n)
 
 -- | Calls the 'factorV'', and times the overall factorisation.
 factorV :: Int -> IO ()
@@ -109,8 +106,9 @@ rand_coprime n = do x <- randomQIO (0,(length cps)-1)
 -- computation that returns a random number between 2 and \n\, that is then
 -- returned if it is co-prime to \n\.
 rand_co' :: Int -> QIO Int
-rand_co' n = do x <- randomQIO (2,n)
-		if gcd x n == 1 then return x else rand_co' n
+rand_co' n = do 
+  x <- randomQIO (2,n)
+  if gcd x n == 1 then return x else rand_co' n
 --simulating this (with the sim function) gives rise to infinite paths in
 --the computation, e.g. each path where gcd x n /= 1. However, this function
 --can still be run (with the run function) always returning a single value.

@@ -26,13 +26,13 @@ hadamards (q:qs) = uhad q `mappend` hadamards qs
 pow2 :: Int -> Int
 pow2 x = pow2' 0
   where pow2' y | 2^(y+1) > x = 2^y
-	        | otherwise = pow2' (y+1)
+            | otherwise = pow2' (y+1)
 
 -- | A rotation that, given a qubit in state 0, leaves it in a super-position of
 -- 0 and 1, such that the probability of measuring as state 0 is \ps\.
 weightedU :: RR -> Qbit -> U
 weightedU ps q | sqrt ps <= 1 = rot q (rX (2*(acos (sqrt ps))))
-	       | otherwise = error ("weightedU: Invalid Probability: " ++ show ps) 		
+           | otherwise = error ("weightedU: Invalid Probability: " ++ show ps)      
 -- | A QIO computation that uses the "weightedU" unitary, to return a Bool that
 -- has a probablity of \pf\ of being False.
 weightedBool :: RR -> QIO Bool
@@ -69,17 +69,18 @@ randomU max qbs = randomU' max (trim max qbs)
   randomU' _ [] = mempty
   randomU' 0 _ = mempty
   randomU' max (q:qbs) = weightedU (fromIntegral ((max+1)-p)/fromIntegral (max+1)) q
-		         `mappend`
-		         condQ q (\x -> if x then (randomU (max-p) qbs) 
-			                    else (hadamards qbs))
-		          where p = pow2 max
+                 `mappend`
+                 condQ q (\x -> if x then (randomU (max-p) qbs) 
+                                else (hadamards qbs))
+                  where p = pow2 max
 
 -- | A quantum computation that will return a quantum integer in a state that
 -- has equal probabilities of being measured in any of the state 0 to \max\.
 randomQInt :: Int -> QIO QInt
-randomQInt max = do qbs <- mkQ (reverse (int2bits max))
-		    applyU (randomU max qbs)
-                    return (QInt (reverse qbs))
+randomQInt max = do 
+  qbs <- mkQ (reverse (int2bits max))
+  applyU (randomU max qbs)
+  return (QInt (reverse qbs))
 
 -- | A quantum computation that will return a quantum integer in a state that
 -- has equal probabilities of being measured in any of the state \min\ to \max\.
@@ -89,25 +90,28 @@ randomQIO (min,max) = do q <- randomInt (max-min)
 
 -- | A quantum computation that measures the outcome of "randomQInt"
 randomInt :: Int -> QIO Int
-randomInt max = do q <- randomQInt max
-	           measQ q
+randomInt max = do 
+  q <- randomQInt max
+  measQ q
 
 -- | A quantum computation that returns an integer that is equally likely to be
 -- any number in the range 0 to \x\-1
 random :: Int -> QIO Int
 random x = randomInt (x-1)
-		    
+            
 -- | This function uses a Quantum computation to simulate the roll of a dice
 dice :: IO Int
-dice = do x <- run (randomInt 5)
-	  return (x+1)
+dice = do 
+  x <- run (randomInt 5)
+  return (x+1)
 
 -- | This function simulates the given number of repitions of dice rolls
 dice_rolls :: Int -> IO [Int]
 dice_rolls 0 = return []
-dice_rolls y = do x <- dice
-	          xs <- dice_rolls (y-1)
-                  return (x:xs)
+dice_rolls y = do 
+  x <- dice
+  xs <- dice_rolls (y-1)
+  return (x:xs)
 
 -- | Returns the number of occurences of 1 through 6 in the given list of Ints
 occs :: [Int] -> (Int,Int,Int,Int,Int,Int)
@@ -118,14 +122,16 @@ occs rs = (rs' 1,rs' 2,rs' 3,rs' 4,rs' 5,rs' 6)
 -- | Returns the number of occurences of 1 through 6 in the given number of
 -- rolls of the dice.
 probs' :: Int -> IO (Int,Int,Int,Int,Int,Int)
-probs' x = do xs <- dice_rolls x
-	      return (occs xs)
+probs' x = do 
+  xs <- dice_rolls x
+  return (occs xs)
 
 -- | Returns the percentage of occurences of 1 through 6, after the given number
 -- of rolls of the dice.
 probs :: Int -> IO (RR,RR,RR,RR,RR,RR)
-probs x = do (a,b,c,d,e,f) <- probs' x
-	     return (fromIntegral a/x',fromIntegral b/x',fromIntegral c/x',fromIntegral d/x',fromIntegral e/x',fromIntegral f/x')
-		    where x' = fromIntegral x
+probs x = do 
+  (a,b,c,d,e,f) <- probs' x
+  return (fromIntegral a/x',fromIntegral b/x',fromIntegral c/x',fromIntegral d/x',fromIntegral e/x',fromIntegral f/x')
+    where x' = fromIntegral x
 
-		   
+           

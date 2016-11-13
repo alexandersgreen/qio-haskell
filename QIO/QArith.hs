@@ -15,8 +15,9 @@ import QIO.QExamples
 -- over the underlying qubits that make up a QInt.
 swapQInt :: QInt -> QInt -> U
 swapQInt (QInt xs) (QInt ys) = swapQInt' xs ys
-			       where swapQInt' [] [] = mempty
-				     swapQInt' (x:xs) (y:ys) = (swap x y) `mappend` swapQInt' xs ys
+  where 
+   swapQInt' [] [] = mempty
+   swapQInt' (x:xs) (y:ys) = (swap x y) `mappend` swapQInt' xs ys
 
 -- | ifElseQ defines a quantum If statement, whereby depending on the state of
 -- the given (control) qubit, one of two unitaries are applied.
@@ -94,11 +95,12 @@ tRadder xyc = do q @ (qx,(qy,qc)) <- mkQ xyc
 -- | A small function to test applying the adder unitary, and then applying
 -- the reverse of the adder unitary, which should give the identity function.
 tBiAdder :: (Int,(Int,Bool)) -> QIO (Int,(Int,Bool))
-tBiAdder xyc = do q @ (qx,(qy,qc)) <- mkQ xyc
-		  applyU (adder qx qy qc)
-		  applyU (urev (adder qx qy qc))
-                  xyc <- measQ q
-	          return xyc
+tBiAdder xyc = do 
+  q @ (qx,(qy,qc)) <- mkQ xyc
+  applyU (adder qx qy qc)
+  applyU (urev (adder qx qy qc))
+  xyc <- measQ q
+  return xyc
 
 -- | This unitary is for modular addition, and is done modulo some fixed
 -- classical modulus, given as the first Int argument.
@@ -136,10 +138,12 @@ tadderMod n ab = do q @ (qa,qb) <- mkQ ab
 -- state 0 before the operation, then it is left in the sate a*x mod n.
 multMod :: Int -> Int -> QInt -> QInt -> U
 multMod n a (QInt x) y = multMod' n a x y 1
-                         where multMod' _ _ [] _ _ = mempty
-			       multMod' n a (x:xs) y p = cond x (\x -> (if x then (letU ((p*a) `mod` n) (\ qa -> (adderMod n qa y)) `mappend` (multMod' n a xs y (p*2)))
-                                                                             else multMod' n a xs y (p*2)))
-		               
+  where 
+   multMod' _ _ [] _ _ = mempty
+   multMod' n a (x:xs) y p = cond x (\x -> (
+    if x then (letU ((p*a) `mod` n) (\ qa -> (adderMod n qa y)) `mappend` (multMod' n a xs y (p*2)))
+         else multMod' n a xs y (p*2)))
+                       
 -- | A small function for testing the modular multiplication unitary. This function
 -- initialises 'y' as zero, so the output is as expected.
 tmultMod :: Int -> Int -> Int -> QIO (Int,Int)
@@ -171,19 +175,21 @@ inverseMod n a = case imods of
 -- | The unitary that represents modular exponentiation is constructed in terms
 -- of multiple \"steps\". This function defines those steps.
 modExpStep :: Qbit -> Int -> Int -> QInt -> Int -> U
-modExpStep qc n a o p = letU 0 (\z ->                (condMultMod qc n p'                o z) 
-			             `mappend` (ifQ qc (swapQInt o z))
-                                     `mappend` (urev (condMultMod qc n (inverseMod n p') o z)))
-				  where p' | (a^(2^p)) == 0 = error "modExpStep: arguments too large"
-					   | otherwise = (a^(2^p)) `mod` n
+modExpStep qc n a o p = letU 0 (\z -> (condMultMod qc n p' o z) 
+                        `mappend` (ifQ qc (swapQInt o z)) 
+                        `mappend` (urev (condMultMod qc n (inverseMod n p') o z)))
+  where 
+    p' | (a^(2^p)) == 0 = error "modExpStep: arguments too large"
+       | otherwise = (a^(2^p)) `mod` n
 
 -- | A QIO computation that forms a test of the 'modExpStep' unitary
 modExpStept :: Int -> Int -> Int -> Int -> QIO Int
-modExpStept i n a p = do q <- mkQ True
-		         one <- mkQ i
-		         applyU (modExpStep q n a one p)	      
-		         r <- measQ one	     
-		         return r
+modExpStept i n a p = do 
+  q <- mkQ True
+  one <- mkQ i
+  applyU (modExpStep q n a one p)          
+  r <- measQ one      
+  return r
 
 -- | This function defines a unitary that implements modular exponentiation, as
 -- required in Shor's algorithm. Given classical arguments \n\ and \a\, a quantum
@@ -191,21 +197,22 @@ modExpStept i n a p = do q <- mkQ True
 -- leave the quantum register \o\ in the state \a\^\x\ mod \n\.
 modExp :: Int -> Int -> QInt -> QInt -> U
 modExp n a (QInt x) o = modExp' n a x o 0
-                        where modExp' _ _ [] _ _ = mempty
-			      modExp' n a (x:xs) o p =           modExpStep x n a o p 
-						      `mappend` (modExp' n a xs o (p+1))
+  where 
+    modExp' _ _ [] _ _ = mempty
+    modExp' n a (x:xs) o p = modExpStep x n a o p `mappend` (modExp' n a xs o (p+1))
 
 -- | A QIO computation that forms a test of the modular exponentiation unitary.
 modExpt :: Int -> (Int,Int) -> QIO Int
-modExpt n (a,x) = do qx <- mkQ x
-		     one <- mkQ 1
-                     applyU (modExp n a qx one)
-                     r <- measQ one
-		     return r
+modExpt n (a,x) = do 
+  qx <- mkQ x
+  one <- mkQ 1
+  applyU (modExp n a qx one)
+  r <- measQ one
+  return r
 
 
 
-		       
+               
 
 
 

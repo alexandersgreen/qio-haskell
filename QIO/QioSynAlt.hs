@@ -28,7 +28,7 @@ newtype Qbit = Qbit Int deriving (Num, Enum, Eq, Ord)
 
 -- | We can display a qubit reference
 instance Show Qbit where
-	show (Qbit q) = "(Qbit:" ++ show q ++ ")"
+    show (Qbit q) = "(Qbit:" ++ show q ++ ")"
 
 -- | A rotation is in essence a two-by-two complex valued matrix
 type Rotation = ((Bool,Bool) -> CC)

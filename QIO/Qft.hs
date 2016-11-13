@@ -22,9 +22,9 @@ qftAcu (q:qs) (b:bs) cs = qftBase cs q `mappend` qftAcu qs bs (b:cs)
 -- | The \"base\" step involved in a QFT is a series of controlled rotations.
 qftBase :: [Bool] -> Qbit -> U
 qftBase bs q =  f' bs q 2
-	where f' [] q _ = uhad q
-	      f' (b:bs) q x = if b then (rotK x q) `mappend` f' bs q (x+1) 
-			      else f' bs q (x+1)
+    where f' [] q _ = uhad q
+          f' (b:bs) q x = if b then (rotK x q) `mappend` f' bs q (x+1) 
+                  else f' bs q (x+1)
 
 --need to change this into a conQRec???
 -- e.g. qft [Qbit 0]
@@ -38,7 +38,8 @@ rotK k q = uphase q (1.0/(2.0^k))
 
 -- | A test of the QFT unitary, over a quantum integer initialised to \n\.
 tryQft :: Int -> QIO Int
-tryQft n = do QInt qs <- mkQ n
-	      applyU(qft qs)
-	      x <- measQ (QInt qs)
-	      return x
+tryQft n = do 
+  QInt qs <- mkQ n
+  applyU(qft qs)
+  x <- measQ (QInt qs)
+  return x
