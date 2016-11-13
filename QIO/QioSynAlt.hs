@@ -5,7 +5,7 @@
 -- | This module defines the Syntax of the Quantum IO Monad, which is
 -- an embedded language for writing quantum computations. It is an
 -- alternative definition using the approach of defining F-Algebras.
-module QIO.QioSyn where
+module QIO.QioSynAlt where
 
 import Data.Monoid as Monoid
 import Data.Complex
