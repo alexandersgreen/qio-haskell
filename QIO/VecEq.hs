@@ -8,6 +8,8 @@ module QIO.VecEq where
 
 import QIO.QioSyn
 import QIO.Heap
+import Control.Applicative (Applicative(..))
+import Control.Monad       (liftM, ap)
 
 -- | Any type that fulfills this type class is a Vector over types with equality
 class VecEq v where
@@ -16,7 +18,7 @@ class VecEq v where
     -- | Two Vectors can be combined
     (<+>) :: (Eq a, Num x) => v x a -> v x a -> v x a
     -- | A Vector can be multiplied by a scalar
-    (<*>) :: (Num x, Eq x) => x -> v x a -> v x a
+    (<.>) :: (Num x, Eq x) => x -> v x a -> v x a
     -- | The amplitude of a given element can be accessed
     (<@>) :: (Eq a, Num x) => a -> v x a -> x
     -- | The vector can be created from a list of pairs
@@ -64,7 +66,7 @@ a `vEqAt` (VecEqL ((a',b):abs)) | a == a' = b
 instance VecEq VecEqL where
       vzero = vEqZero
       (<+>) = vEqPlus
-      (<*>) = vEqTimes
+      (<.>) = vEqTimes
       (<@>) = vEqAt
       fromList as = VecEqL as
       toList (VecEqL as) = as
@@ -80,8 +82,8 @@ instance (VecEq v, Num x, Eq x) => EqMonad (v x) where
     eqReturn a = fromList [(a,1)]
     eqBind va f = case toList va of
                    ([]) -> vzero
-                   ((a,x):[]) -> x <*> f a
-                   ((a,x):vas) -> (x <*> f a) <+> ((fromList vas) `eqBind` f)
+                   ((a,x):[]) -> x <.> f a
+                   ((a,x):vas) -> (x <.> f a) <+> ((fromList vas) `eqBind` f)
 
 -- | We can define a datatype that holds EqMonad operations, so that it can
 -- be defined as a Monad. 
@@ -90,9 +92,16 @@ data AsMonad m a where
    Return :: EqMonad m => a -> AsMonad m a
    Bind   :: EqMonad m => AsMonad m a -> (a -> AsMonad m b) -> AsMonad m b
  
+instance EqMonad m => Functor (AsMonad m) where
+    fmap = liftM
+ 
+instance EqMonad m => Applicative (AsMonad m)  where
+    pure  = Return
+    (<*>) = ap
+
 -- | We can define an AsMonad over an EqMonad, as a Monad
 instance EqMonad m => Monad (AsMonad m) where
-   return = Return
+   return = pure
    (>>=) = Bind
 
 -- | Given Equality, we can unembed the EqMonad operations from an AsMonad

@@ -1,8 +1,10 @@
-
 -- | This module defines a Vector as a list of pairs. 
 -- In the context of QIO, a Vector is the type used to represent a probability
 -- distribution.
 module QIO.Vec where
+
+import Control.Applicative (Applicative(..))
+import Control.Monad       (liftM, ap)
 
 -- | A Vector over types 'x' and 'a' is a wrapper around list of 
 -- pairs of 'a' and 'x'.
@@ -26,8 +28,21 @@ l <**> (Vec as) = (Vec (map (\ (a,k) -> (a,l*k)) as))
 (<++>) :: (Vec x a) -> (Vec x a) -> Vec x a
 (Vec as) <++> (Vec bs) = (Vec (as ++ bs))
 
+instance Num n => Functor (Vec n) where
+    fmap = liftM
+ 
+instance Num n => Applicative (Vec n)  where
+    pure  a = Vec [(a,1)]
+    (<*>) = ap
+
 -- | Vectors, over Numeric types, can be defined as a Monad.
 instance Num n => Monad (Vec n) where
-    return a = Vec [(a,1)]
+    return = pure
     (Vec ms) >>= f = Vec [(b,i*j) | (a,i) <- ms, (b,j) <- unVec (f a)]
    
+
+ 
+
+
+
+

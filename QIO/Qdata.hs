@@ -44,8 +44,8 @@ instance Qdata a qa => Qdata [a] [qa] where
         where letU' [] xs = xsu xs
               letU' (a:as) xs = letU a (\ x -> letU' as (xs++[x]))
     condQ qs qsu = condQ' qs []
-	where condQ' [] xs = qsu xs
-	      condQ' (a:as) xs = condQ a (\ x -> condQ' as (xs++[x]))
+        where condQ' [] xs = qsu xs
+              condQ' (a:as) xs = condQ a (\ x -> condQ' as (xs++[x]))
 
 -- | A recursive conditional on a list of quantum data
 condQRec :: Qdata a qa => [qa] -> [(a -> U)] -> U

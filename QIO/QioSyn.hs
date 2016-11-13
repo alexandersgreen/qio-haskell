@@ -6,6 +6,8 @@ module QIO.QioSyn where
 
 import Data.Monoid as Monoid
 import Data.Complex
+import Control.Applicative (Applicative(..))
+import Control.Monad       (liftM, ap)
 
 -- | For Real numbers, we simply use the built in Double type
 type RR = Double
@@ -78,10 +80,16 @@ uhad x = rot x rhad
 uphase :: Qbit -> RR -> U
 uphase x r = rot x (rphase r) 
 
+instance Functor QIO where
+    fmap = liftM
+ 
+instance Applicative QIO  where
+    pure  = QReturn
+    (<*>) = ap
 
 -- | The "QIO" type forms a Monad
 instance Monad QIO where
-    return = QReturn
+    return = pure
     (QReturn a) >>= f = f a
     (MkQbit b g) >>= f = MkQbit b (\ x -> g x >>= f)
     (ApplyU u q) >>= f = ApplyU u (q >>= f)
@@ -140,7 +148,7 @@ instance Eq Rotation where
 
 -- | We can display a qubit reference
 instance Show Qbit where
-	show (Qbit q) = "(Qbit:" ++ show q ++ ")"
+    show (Qbit q) = "(Qbit:" ++ show q ++ ")"
 
 -- | We can display the matrix representation of a rotation
 instance Show Rotation where
@@ -148,7 +156,7 @@ instance Show Rotation where
 
 -- | We can display a representation of a unitary
 instance Show U where
-	show u = show' u 0 (-1)
+    show u = show' u 0 (-1)
 
 -- | A helper function for the show instance of U
 show' :: U -> Int -> Int -> String

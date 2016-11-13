@@ -9,6 +9,8 @@ module QIO.QioSyn where
 
 import Data.Monoid as Monoid
 import Data.Complex
+import Control.Applicative (Applicative(..))
+import Control.Monad       (liftM, ap)
 
 -- | For Real numbers, we simply use the built in Double type
 type RR = Double
@@ -217,9 +219,16 @@ data QIO a = Apply (Fix (QIOFunctor a))
 primQIO :: QIO a -> QIOprim a
 primQIO (Apply q) = q
 
+instance Functor QIO where
+    fmap = liftM
+ 
+instance Applicative QIO  where
+    pure  = Apply . Fx . QReturn
+    (<*>) = ap
+
 -- | The wrapper type 'ApplyFix' forms a Monad
 instance Monad QIO where
-    return = Apply . Fx . QReturn
+    return = pure
     (Apply (Fx (QReturn a))) >>= f = f a
     (Apply (Fx (MkQbit b g))) >>= f = Apply . Fx $ 
       MkQbit b  (\q -> primQIO $ (Apply (g q)) >>= f)

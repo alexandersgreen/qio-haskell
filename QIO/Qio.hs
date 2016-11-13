@@ -12,6 +12,8 @@ import QIO.QioSyn
 import QIO.Vec
 import QIO.VecEq
 import QIO.Heap
+import Control.Applicative (Applicative(..))
+import Control.Monad       (liftM, ap)
 
 -- | A "Pure" state can be thought of as a vector of classical basis states, stored
 -- as Heaps, along with complex amplitudes.
@@ -46,10 +48,10 @@ unitaryRot r = True
 -- a Unitary that applies the rotation to the given qubit.
 uMatrix :: Qbit -> (CC,CC,CC,CC) -> Unitary
 uMatrix q (m00,m01,m10,m11) = U (\ fv h -> (if (fromJust(h ? q)) 
-                                           then   (m01 <*> (unEmbed $ return (update h q False))) 
-                                                  <+> (m11 <*> (unEmbed $ return h)) 
-                                           else   (m00 <*> (unEmbed $ return h)) 
-                                                  <+> (m10 <*> (unEmbed $ return (update h q True)))))
+                                           then   (m01 <.> (unEmbed $ return (update h q False))) 
+                                                  <+> (m11 <.> (unEmbed $ return h)) 
+                                           else   (m00 <.> (unEmbed $ return h)) 
+                                                  <+> (m10 <.> (unEmbed $ return (update h q True)))))
 
 -- | A rotation can be converted into a "Unitary", using the 'uMatrix' function
 uRot :: Qbit -> Rotation -> Unitary
@@ -85,7 +87,7 @@ runU (Ulet b xu u) = uLet b (runU.xu) `mappend` runU u
 
 -- | A quantum state is a defined as the next free qubit reference, along with the
 -- Pure state that represents the overall quantum state
-data StateQ = StateQ { free :: Int, pure :: Pure }
+data StateQ = StateQ { free :: Int, pureState :: Pure }
 
 -- | The initial 'StateQ'
 initialStateQ :: StateQ
@@ -129,9 +131,16 @@ data Prob a = Prob {unProb :: Vec RR a}
 instance Show a => Show (Prob a) where
     show (Prob (Vec ps)) = show (filter (\ (a,p) -> p>0) ps)
 
+instance Functor Prob where
+    fmap = liftM
+ 
+instance Applicative Prob where
+    pure = Prob . return
+    (<*>) = ap
+
 -- | Prob forms a Monad
 instance Monad Prob where
-    return = Prob . return
+    return = pure
     (Prob ps) >>= f = Prob (ps >>= unProb . f)
 
 -- | Prob is also a PMonad, where the result of both computations are combined into
