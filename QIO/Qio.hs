@@ -29,12 +29,14 @@ updateP p x b = VecEqL (map (\ (h,pa) -> (update h x b,pa)) (unVecEqL p))
 newtype Unitary =  U {unU :: Int -> HeapMap -> Pure }
 
 -- | The Unitary type forms a Monoid
+instance Semigroup Unitary where
+    (U f) <> (U g) = U (\ fv h -> unEmbed $ do h' <- Embed $ f fv h
+                                               h'' <- Embed $ g fv  h'
+                                               return h''
+                       )
+
 instance Monoid Unitary where
     mempty = U (\ fv h -> unEmbed $ return h)
-    mappend (U f) (U g) = U (\ fv h -> unEmbed $ do h' <- Embed $ f fv h
-                                                    h'' <- Embed $ g fv  h'
-                                                    return h''
-                                                 )
 
 -- | A function that checks if a given "Rotation" is in face unitary. Note that
 -- this is currently a dummy stub function, and states that any rotation is
@@ -47,10 +49,10 @@ unitaryRot r = True
 -- | Given the four complex numbers that make up a 2-by-2 matrix, we can create
 -- a Unitary that applies the rotation to the given qubit.
 uMatrix :: Qbit -> (CC,CC,CC,CC) -> Unitary
-uMatrix q (m00,m01,m10,m11) = U (\ fv h -> (if (fromJust(h ? q)) 
-                                           then   (m01 <.> (unEmbed $ return (update h q False))) 
-                                                  <+> (m11 <.> (unEmbed $ return h)) 
-                                           else   (m00 <.> (unEmbed $ return h)) 
+uMatrix q (m00,m01,m10,m11) = U (\ fv h -> (if (fromJust(h ? q))
+                                           then   (m01 <.> (unEmbed $ return (update h q False)))
+                                                  <+> (m11 <.> (unEmbed $ return h))
+                                           else   (m00 <.> (unEmbed $ return h))
                                                   <+> (m10 <.> (unEmbed $ return (update h q True)))))
 
 -- | A rotation can be converted into a "Unitary", using the 'uMatrix' function
@@ -97,7 +99,7 @@ initialStateQ = StateQ 0 (unEmbed $ return initial)
 pa :: Pure -> RR
 pa (VecEqL as) = foldr (\ (_,k) p -> p + amp k) 0 as
 
--- | A Split, is defined as a probability, along with the two Pure states. 
+-- | A Split, is defined as a probability, along with the two Pure states.
 data Split = Split { p :: RR, ifTrue,ifFalse :: Pure }
 
 -- | Given a Pure state, we can create a Split, by essentially splitting the
@@ -133,7 +135,7 @@ instance Show a => Show (Prob a) where
 
 instance Functor Prob where
     fmap = liftM
- 
+
 instance Applicative Prob where
     pure = Prob . return
     (<*>) = ap
@@ -152,7 +154,7 @@ instance PMonad Prob where
 -- over a quantum state (of type 'StateQ').
 evalWith :: PMonad m => QIO a -> State StateQ (m a)
 evalWith (QReturn a) = return (return a)
-evalWith (MkQbit b g) = do (StateQ f p) <- get 
+evalWith (MkQbit b g) = do (StateQ f p) <- get
                            put (StateQ (f+1) (updateP p (Qbit f) b))
                            evalWith (g (Qbit f))
 evalWith (ApplyU u q) = do (StateQ f p) <- get
@@ -161,11 +163,11 @@ evalWith (ApplyU u q) = do (StateQ f p) <- get
                                                        return x'
                                           )
                                 )
-                           evalWith q  
+                           evalWith q
                                where U uu = runU u
 evalWith (Meas x g) = do (StateQ f p) <- get
                          (let Split pr ift iff = split p x
-                          in if pr < 0 || pr > 1 then error "pr < 0 or >1" 
+                          in if pr < 0 || pr > 1 then error "pr < 0 or >1"
                              else do put (StateQ f ift)
                                      pift <- evalWith (g True)
                                      put (StateQ f iff)

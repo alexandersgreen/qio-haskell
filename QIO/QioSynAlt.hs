@@ -15,7 +15,7 @@ import Control.Monad       (liftM, ap)
 -- | For Real numbers, we simply use the built in Double type
 type RR = Double
 
--- | For Complex numbers, we use the built in Complex numbers, over our Real 
+-- | For Complex numbers, we use the built in Complex numbers, over our Real
 -- number type (i.e. Double)
 type CC = Complex RR
 
@@ -57,33 +57,33 @@ rphase _ (_,_)          = 0
 
 -- | Returns the inverse (or reverse) of the given rotation
 rrev :: Rotation -> Rotation
-rrev r (False,True)   = conjugate (r (True,False)) 
+rrev r (False,True)   = conjugate (r (True,False))
 rrev r (True,False)   = conjugate (r (False,True))
 rrev r xy             = conjugate (r xy)
 
 -- | Rotations can be compared for equality.
 -- They are equal if the define the same matrix.
 instance Eq Rotation where
-    f == g =    (f (False,False)  == g (False,False)) 
-             && (f (False,True)   == g (False,True)) 
-             && (f (True,False)   == g (True,False)) 
+    f == g =    (f (False,False)  == g (False,False))
+             && (f (False,True)   == g (False,True))
+             && (f (True,False)   == g (True,False))
              && (f (True,True)    == g (True,True))
-    f /= g =    (f (False,False)  /= g (False,False)) 
-             || (f (False,True)   /= g (False,True)) 
-             || (f (True,False)   /= g (True,False)) 
+    f /= g =    (f (False,False)  /= g (False,False))
+             || (f (False,True)   /= g (False,True))
+             || (f (True,False)   /= g (True,False))
              || (f (True,True)    /= g (True,True))
 
 -- | The non-recursive data type definition of a unitary operation
-data UFunctor u = UReturn 
+data UFunctor u = UReturn
                 | Rot Qbit Rotation u
-                | Swap Qbit Qbit u 
-                | Cond Qbit (Bool -> u) u 
+                | Swap Qbit Qbit u
+                | Cond Qbit (Bool -> u) u
                 | Ulet Bool (Qbit -> u) u
 
 -- | In order to define an F-Algebra, 'UFunctor' must be a functor.
 instance Functor UFunctor where
     fmap eval UReturn = UReturn
-    fmap eval (Rot q r u) = Rot q r (eval u)  
+    fmap eval (Rot q r u) = Rot q r (eval u)
     fmap eval (Swap q1 q2 u) = Swap q1 q2 (eval u)
     fmap eval (Cond q f u) = Cond q (eval . f) (eval u)
     fmap eval (Ulet b f u) = Ulet b (eval . f) (eval u)
@@ -114,14 +114,16 @@ uInitialAlgebra = Fx
 cata :: Functor f => Algebra f a -> Fix f -> a
 cata algebra = algebra . fmap (cata algebra) . unFix
 
--- | The type "U" forms a Monoid. 
+-- | The type "U" forms a Monoid.
+instance Semigroup U where
+    (Fx UReturn) <> u = u
+    (Fx (Rot x a u)) <> u' = Fx $ Rot x a (u <> u')
+    (Fx (Swap x y u)) <> u' = Fx $ Swap x y (u <> u')
+    (Fx (Cond x br u')) <> u'' = Fx $ Cond x br (u' <> u'')
+    (Fx (Ulet b f u)) <> u' = Fx $ Ulet b f (u <> u')
+
 instance Monoid U where
     mempty = Fx UReturn
-    mappend (Fx UReturn) u = u
-    mappend (Fx (Rot x a u)) u' = Fx $ Rot x a (mappend u u')
-    mappend (Fx (Swap x y u)) u' = Fx $ Swap x y (mappend u u')
-    mappend (Fx (Cond x br u')) u'' = Fx $ Cond x br (mappend u' u'')
-    mappend (Fx (Ulet b f u)) u' = Fx $ Ulet b f (mappend u u')
 
 -- | Apply the given rotation to the given qubit
 rot :: Qbit -> Rotation -> U
@@ -149,13 +151,13 @@ uhad x = rot x rhad
 
 -- | Apply a phase rotation (of the given angle) to the given qubit
 uphase :: Qbit -> RR -> U
-uphase x r = rot x (rphase r) 
+uphase x r = rot x (rphase r)
 
 -- | Returns the inverse (or reverse) of the given unitary operation,
 -- using an F-Algebra
 urev :: U -> U
 urev = cata urev_algebra
- where 
+ where
    urev_algebra :: UFunctor U -> U
    urev_algebra UReturn = Fx UReturn
    urev_algebra (Rot x r u) = u `mappend` rot x (rrev r)
@@ -169,11 +171,11 @@ instance Show U where
     where
       showU_algebra :: UFunctor String -> String
       showU_algebra UReturn = ""
-      showU_algebra (Rot q r u) = 
-       "Rotate " ++ show q ++ ":" ++ show r ++ "\n" ++ u 
-      showU_algebra (Swap q1 q2 u) = 
+      showU_algebra (Rot q r u) =
+       "Rotate " ++ show q ++ ":" ++ show r ++ "\n" ++ u
+      showU_algebra (Swap q1 q2 u) =
        "Swap " ++ show q1 ++ " and " ++ show q2 ++ "\n" ++ u
-      showU_algebra (Cond q br u) = 
+      showU_algebra (Cond q br u) =
        "Cond " ++ show q ++ " \\b -> if b then (\n"
        ++ unlines (map (' ':) (lines $ br True))
        ++ ") else (\n"
@@ -181,16 +183,16 @@ instance Show U where
        ++ ")\n" ++ u
       showU_algebra (Ulet b xu u) =
        let fv = find_fv xu in
-       "Ulet " ++ show fv ++ " = " ++ (if b then "1" else "0") ++ " in (\n" 
+       "Ulet " ++ show fv ++ " = " ++ (if b then "1" else "0") ++ " in (\n"
        ++ unlines (map (' ':) (lines $ xu fv))
        ++ ")\n" ++ u
       -- this is currently a dummy function
       find_fv :: (Qbit -> String) -> Qbit
-      find_fv _ = -1      
+      find_fv _ = -1
 
 -- | The non-recursive data type definition of a QIO computation
-data QIOFunctor a q = QReturn a 
-                    | MkQbit Bool (Qbit -> q) 
+data QIOFunctor a q = QReturn a
+                    | MkQbit Bool (Qbit -> q)
                     | ApplyU U q
                     | Meas Qbit (Bool -> q)
 
@@ -211,7 +213,7 @@ type QIOInitialAlgebra a = Algebra (QIOFunctor a) (QIOprim a)
 -- | We can now define the initial algebra for U
 qioInitialAlgebra :: QIOInitialAlgebra a
 qioInitialAlgebra = Fx
-  
+
 -- | The "QIO" type forms a Monad, by wrapping 'QIOprim'
 data QIO a = Apply (Fix (QIOFunctor a))
 
@@ -221,7 +223,7 @@ primQIO (Apply q) = q
 
 instance Functor QIO where
     fmap = liftM
- 
+
 instance Applicative QIO  where
     pure  = Apply . Fx . QReturn
     (<*>) = ap
@@ -230,11 +232,11 @@ instance Applicative QIO  where
 instance Monad QIO where
     return = pure
     (Apply (Fx (QReturn a))) >>= f = f a
-    (Apply (Fx (MkQbit b g))) >>= f = Apply . Fx $ 
+    (Apply (Fx (MkQbit b g))) >>= f = Apply . Fx $
       MkQbit b  (\q -> primQIO $ (Apply (g q)) >>= f)
-    (Apply (Fx (ApplyU u q))) >>= f = Apply . Fx $ 
+    (Apply (Fx (ApplyU u q))) >>= f = Apply . Fx $
       ApplyU u $ primQIO (Apply q >>= f)
-    (Apply (Fx (Meas x g))) >>= f = Apply . Fx $ 
+    (Apply (Fx (Meas x g))) >>= f = Apply . Fx $
       Meas x (\b -> primQIO $ (Apply (g b)) >>= f)
 
 -- | Initialise a qubit in the given state (adding it to the overall quantum state)
@@ -254,17 +256,17 @@ measQbit x = Apply . Fx $ Meas x (\b -> primQIO (return b))
 instance (Show a) => Show (QIO a) where
   show = (cata showQIO_algebra) . primQIO
    where
-    showQIO_algebra :: (Show a) => Algebra (QIOFunctor a) String       
-    showQIO_algebra (QReturn a) = 
+    showQIO_algebra :: (Show a) => Algebra (QIOFunctor a) String
+    showQIO_algebra (QReturn a) =
        "Return: " ++ show a ++ "\n"
-    showQIO_algebra (MkQbit b f) = 
+    showQIO_algebra (MkQbit b f) =
        "Init" ++ (if b then "1" else "0") ++ "\n"
        ++ f 0
-    showQIO_algebra (ApplyU u qio) = 
+    showQIO_algebra (ApplyU u qio) =
        "Apply Unitary: (\n"
        ++ unlines (map (' ':) (lines $ show u))
        ++ ")\n" ++ qio
-    showQIO_algebra (Meas q f) = 
+    showQIO_algebra (Meas q f) =
        "Measure " ++ show q ++ " \\b -> if b then (\n"
        ++ unlines (map (' ':) (lines $ f True))
        ++ ") else (\n"
@@ -282,11 +284,11 @@ count = (cata count_algebra) . primQIO
   count_algebra (ApplyU _ (mk,ap,ms)) = (mk,ap+1,ms)
   count_algebra (Meas q f) = let (mk,ap,ms) = f False in
                              (mk,ap,ms+1)
-     
+
 toffoli :: Qbit -> Qbit -> Qbit -> U
-toffoli q1 q2 q3 = 
+toffoli q1 q2 q3 =
   cond q1 (\b1 -> if b1 then (
-   cond q2 (\b2 -> if b2 then (unot q3) 
+   cond q2 (\b2 -> if b2 then (unot q3)
     else mempty)) else mempty)
 
 and :: Bool -> Bool -> QIO Bool
