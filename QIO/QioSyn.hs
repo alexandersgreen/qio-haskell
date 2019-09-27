@@ -12,7 +12,7 @@ import Control.Monad       (liftM, ap)
 -- | For Real numbers, we simply use the built in Double type
 type RR = Double
 
--- | For Complex numbers, we use the built in Complex numbers, over our Real 
+-- | For Complex numbers, we use the built in Complex numbers, over our Real
 -- number type (i.e. Double)
 type CC = Complex RR
 
@@ -32,17 +32,22 @@ data U = UReturn | Rot Qbit Rotation U
        | Swap Qbit Qbit U | Cond Qbit (Bool -> U) U | Ulet Bool (Qbit -> U) U
 
 -- | The underlying data type of a QIO Computation
-data QIO a = QReturn a | MkQbit Bool (Qbit -> QIO a) | ApplyU U (QIO a) 
+data QIO a = QReturn a | MkQbit Bool (Qbit -> QIO a) | ApplyU U (QIO a)
            | Meas Qbit (Bool -> QIO a)
 
--- | The type "U" forms a Monoid 
-instance Monoid U where
-    mempty = UReturn
-    mappend UReturn u = u
-    mappend (Rot x a u) u' = Rot x a (mappend u u')
-    mappend (Swap x y u) u' = Swap x y (mappend u u')
-    mappend (Cond x br u') u'' = Cond x br (mappend u' u'')
-    mappend (Ulet b f u) u' = Ulet b f (mappend u u')
+
+-- | The type "U" forms a Monoid
+instance Semigroup U where
+    --mempty = UReturn
+    UReturn <> u = u
+    (Rot x a u) <> u' = Rot x a (u <> u')
+    (Swap x y u) <> u' = Swap x y (u <> u')
+    (Cond x br u') <> u'' = Cond x br (u' <> u'')
+    (Ulet b f u) <> u' = Ulet b f (u <> u')
+
+instance Monoid  U where
+  mempty = UReturn
+
 
 -- | Apply the given rotation to the given qubit
 rot :: Qbit -> Rotation -> U
@@ -63,10 +68,10 @@ ulet b ux = Ulet b ux UReturn
 -- | Returns the inverse (or reverse) of the given unitary operation
 urev :: U -> U
 urev UReturn = UReturn
-urev (Rot x r u) = urev u `mappend` rot x (rrev r)
-urev (Swap x y u) = urev u `mappend` swap x y
-urev (Cond x br u) = urev u `mappend` cond x (urev.br)
-urev (Ulet b xu u) = urev u `mappend` ulet b (urev.xu)
+urev (Rot x r u) = urev u <> rot x (rrev r)
+urev (Swap x y u) = urev u <> swap x y
+urev (Cond x br u) = urev u <> cond x (urev.br)
+urev (Ulet b xu u) = urev u <> ulet b (urev.xu)
 
 -- | Apply a not rotation to the given qubit
 unot :: Qbit -> U
@@ -78,11 +83,11 @@ uhad x = rot x rhad
 
 -- | Apply a phase rotation (of the given angle) to the given qubit
 uphase :: Qbit -> RR -> U
-uphase x r = rot x (rphase r) 
+uphase x r = rot x (rphase r)
 
 instance Functor QIO where
     fmap = liftM
- 
+
 instance Applicative QIO  where
     pure  = QReturn
     (<*>) = ap
@@ -129,20 +134,20 @@ rphase _ (_,_)          = 0
 
 -- | Returns the inverse (or reverse) of the given rotation
 rrev :: Rotation -> Rotation
-rrev r (False,True)   = conjugate (r (True,False)) 
+rrev r (False,True)   = conjugate (r (True,False))
 rrev r (True,False)   = conjugate (r (False,True))
 rrev r xy             = conjugate (r xy)
 
 -- | Rotations can be compared for equality.
 -- They are equal if the define the same matrix.
 instance Eq Rotation where
-    f == g =    (f (False,False)  == g (False,False)) 
-             && (f (False,True)   == g (False,True)) 
-             && (f (True,False)   == g (True,False)) 
+    f == g =    (f (False,False)  == g (False,False))
+             && (f (False,True)   == g (False,True))
+             && (f (True,False)   == g (True,False))
              && (f (True,True)    == g (True,True))
-    f /= g =    (f (False,False)  /= g (False,False)) 
-             || (f (False,True)   /= g (False,True)) 
-             || (f (True,False)   /= g (True,False)) 
+    f /= g =    (f (False,False)  /= g (False,False))
+             || (f (False,True)   /= g (False,True))
+             || (f (True,False)   /= g (True,False))
              || (f (True,True)    /= g (True,True))
 
 
@@ -169,6 +174,5 @@ show' (Ulet b f u) x fv = spaces x ++ "Ulet " ++ show b ++ " (\\" ++ show (Qbit 
 -- | A helper function that returns a string of 4\x\ spaces.
 spaces :: Int -> String
 spaces 0 = ""
-spaces n = if (n < 0) then error "spaces: negative argument" 
-                      else "    " ++ spaces (n-1)  
-
+spaces n = if (n < 0) then error "spaces: negative argument"
+                      else "    " ++ spaces (n-1)
